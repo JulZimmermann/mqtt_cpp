@@ -13,7 +13,12 @@
 #include <algorithm>
 #include <numeric>
 
+#if ASIO_STANDALONE
+#include <asio/buffer.hpp>
+#else
 #include <boost/asio/buffer.hpp>
+#endif // ASIO_STANDALONE
+
 #include <boost/optional.hpp>
 #include <boost/container/static_vector.hpp>
 #include <boost/numeric/conversion/cast.hpp>
@@ -44,7 +49,11 @@
 
 namespace MQTT_NS {
 
+#if ASIO_STANDALONE
+namespace as = asio;
+#else
 namespace as = boost::asio;
+#endif // ASIO_STANDALONE
 
 namespace v5 {
 

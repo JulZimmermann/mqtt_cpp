@@ -10,14 +10,23 @@
 #include <mqtt/variant.hpp> // should be top to configure variant limit
 
 #include <memory>
+
+#if ASIO_STANDALONE
+#include <asio.hpp>
+#else
 #include <boost/asio.hpp>
+#endif // ASIO_STANDALONE
 
 #include <mqtt/namespace.hpp>
 
 #if defined(MQTT_USE_TLS)
+#if ASIO_STANDALONE
+#include <asio/ssl.hpp>
+#else
 #include <boost/asio/ssl.hpp>
-#endif // defined(MQTT_USE_TLS)
+#endif // ASIO_STANDALONE
 
+#endif // defined(MQTT_USE_TLS)
 #include <mqtt/tcp_endpoint.hpp>
 
 #if defined(MQTT_USE_WS)
@@ -31,7 +40,11 @@
 
 namespace MQTT_NS {
 
+#if ASIO_STANDALONE
+namespace as = asio;
+#else
 namespace as = boost::asio;
+#endif // ASIO_STANDALONE
 
 template <typename Mutex, template<typename...> class LockGuard, std::size_t PacketIdBytes>
 class server_endpoint : public endpoint<Mutex, LockGuard, PacketIdBytes> {
@@ -110,7 +123,7 @@ public:
                 acceptor_.emplace(ioc_accept_, ep_);
                 config_(acceptor_.value());
             }
-            catch (boost::system::system_error const& e) {
+            catch (system_error const& e) {
                 as::post(
                     ioc_accept_,
                     [this, ec = e.code()] {
@@ -257,7 +270,7 @@ public:
                 acceptor_.emplace(ioc_accept_, ep_);
                 config_(acceptor_.value());
             }
-            catch (boost::system::system_error const& e) {
+            catch (system_error const& e) {
                 as::post(
                     ioc_accept_,
                     [this, ec = e.code()] {
@@ -350,7 +363,7 @@ private:
                     (error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
-                        boost::system::error_code close_ec;
+                        error_code close_ec;
                         socket->lowest_layer().close(close_ec);
                     }
                 );
@@ -456,7 +469,7 @@ public:
                 acceptor_.emplace(ioc_accept_, ep_);
                 config_(acceptor_.value());
             }
-            catch (boost::system::system_error const& e) {
+            catch (system_error const& e) {
                 as::post(
                     ioc_accept_,
                     [this, ec = e.code()] {
@@ -533,12 +546,12 @@ private:
                     (error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
-                        boost::system::error_code close_ec;
+                        error_code close_ec;
                         socket->lowest_layer().close(close_ec);
                     }
                 );
 
-                auto sb = std::make_shared<boost::asio::streambuf>();
+                auto sb = std::make_shared<as::streambuf>();
                 auto request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
                 auto ps = socket.get();
                 boost::beast::http::async_read(
@@ -706,7 +719,7 @@ public:
                 acceptor_.emplace(ioc_accept_, ep_);
                 config_(acceptor_.value());
             }
-            catch (boost::system::system_error const& e) {
+            catch (system_error const& e) {
                 as::post(
                     ioc_accept_,
                     [this, ec = e.code()] {
@@ -799,7 +812,7 @@ private:
                     (error_code ec) {
                         if (*underlying_finished) return;
                         if (ec) return;
-                        boost::system::error_code close_ec;
+                        error_code close_ec;
                         socket->lowest_layer().close(close_ec);
                     }
                 );
@@ -814,7 +827,7 @@ private:
                             tim->cancel();
                             return;
                         }
-                        auto sb = std::make_shared<boost::asio::streambuf>();
+                        auto sb = std::make_shared<as::streambuf>();
                         auto request = std::make_shared<boost::beast::http::request<boost::beast::http::string_body>>();
                         auto ps = socket.get();
                         boost::beast::http::async_read(

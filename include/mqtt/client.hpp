@@ -18,10 +18,19 @@
 #include <mqtt/optional.hpp>
 
 #include <boost/lexical_cast.hpp>
+
+#if ASIO_STANDALONE
+#include <asio.hpp>
+#else
 #include <boost/asio.hpp>
+#endif // ASIO_STANDALONE
 
 #if defined(MQTT_USE_TLS)
+#if ASIO_STANDALONE
+#include <asio/ssl.hpp>
+#else
 #include <boost/asio/ssl.hpp>
+#endif // ASIO_STANDALONE
 #endif // defined(MQTT_USE_TLS)
 
 #include <mqtt/tcp_endpoint.hpp>
@@ -38,7 +47,12 @@
 
 namespace MQTT_NS {
 
+#if ASIO_STANDALONE
+namespace as = asio;
+#else
 namespace as = boost::asio;
+#endif // ASIO_STANDALONE
+
 namespace mi = boost::multi_index;
 
 template <typename Socket, std::size_t PacketIdBytes = 2>
@@ -413,7 +427,7 @@ public:
      * @param ec error code
      * @param session_life_keeper the passed object lifetime will be kept during the session.
      */
-    void connect(boost::system::error_code& ec, any session_life_keeper = any()) {
+    void connect(error_code& ec, any session_life_keeper = any()) {
         connect(v5::properties{}, ec, force_move(session_life_keeper));
     }
 
@@ -443,7 +457,7 @@ public:
      */
     void connect(
         v5::properties props,
-        boost::system::error_code& ec,
+        error_code& ec,
         any session_life_keeper = any()) {
         as::ip::tcp::resolver r(ioc_);
         auto eps = r.resolve(host_, port_, ec);
@@ -473,7 +487,7 @@ public:
      */
     void connect(
         std::shared_ptr<Socket>&& socket,
-        boost::system::error_code& ec,
+        error_code& ec,
         any session_life_keeper = any()) {
         connect(force_move(socket), v5::properties{}, ec, force_move(session_life_keeper));
     }
@@ -513,7 +527,7 @@ public:
     void connect(
         std::shared_ptr<Socket>&& socket,
         v5::properties props,
-        boost::system::error_code& ec,
+        error_code& ec,
         any session_life_keeper = any()) {
         as::ip::tcp::resolver r(ioc_);
         auto eps = r.resolve(host_, port_, ec);
@@ -1072,9 +1086,9 @@ private:
         tcp_endpoint<as::ip::tcp::socket, Strand>&,
         v5::properties props,
         any session_life_keeper,
-        boost::system::error_code& ec) {
+        error_code& ec) {
         start_session(force_move(props), force_move(session_life_keeper));
-        ec = boost::system::errc::make_error_code(boost::system::errc::success);
+        ec = error_code{};
     }
 
 #if defined(MQTT_USE_WS)
@@ -1093,7 +1107,7 @@ private:
         ws_endpoint<as::ip::tcp::socket, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
-        boost::system::error_code& ec) {
+        error_code& ec) {
         socket.handshake(host_, path_, ec);
         if (ec) return;
         start_session(force_move(props), force_move(session_life_keeper));
@@ -1117,7 +1131,7 @@ private:
         tcp_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
-        boost::system::error_code& ec) {
+        error_code& ec) {
         socket.handshake(as::ssl::stream_base::client, ec);
         if (ec) return;
         start_session(force_move(props), force_move(session_life_keeper));
@@ -1140,7 +1154,7 @@ private:
         ws_endpoint<as::ssl::stream<as::ip::tcp::socket>, Strand>& socket,
         v5::properties props,
         any session_life_keeper,
-        boost::system::error_code& ec) {
+        error_code& ec) {
         socket.next_layer().handshake(as::ssl::stream_base::client, ec);
         if (ec) return;
         socket.handshake(host_, path_, ec);
@@ -1275,7 +1289,7 @@ private:
         Iterator end,
         v5::properties props,
         any session_life_keeper,
-        boost::system::error_code& ec) {
+        error_code& ec) {
         as::connect(socket.lowest_layer(), it, end, ec);
         if (ec) return;
         base::set_connect();

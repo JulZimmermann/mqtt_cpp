@@ -7,18 +7,30 @@
 #if !defined(MQTT_TCP_ENDPOINT_HPP)
 #define MQTT_TCP_ENDPOINT_HPP
 
+#if ASIO_STANDALONE
+#include <asio.hpp>
+#else
 #include <boost/asio.hpp>
-#include <boost/asio/bind_executor.hpp>
+#endif // ASIO_STANDALONE
 
 #if defined(MQTT_USE_TLS)
-#include <boost/asio/ssl.hpp>
+#if ASIO_STANDALONE
+#include <asio/ssl.hpp>
+#else
+<boost/asio/ssl.hpp>
+#endif // ASIO_STANDALONE
 #endif // defined(MQTT_USE_TLS)
 
 #include <mqtt/namespace.hpp>
+#include <mqtt/error_code.hpp>
 
 namespace MQTT_NS {
 
+#if ASIO_STANDALONE
+namespace as = asio;
+#else
 namespace as = boost::asio;
+#endif // ASIO_STANDALONE
 
 template <typename Socket, typename Strand>
 class tcp_endpoint {
@@ -138,7 +150,7 @@ template <typename Socket, typename Strand, typename ConstBufferSequence>
 inline std::size_t write(
     tcp_endpoint<Socket, Strand>& ep,
     ConstBufferSequence && buffers,
-    boost::system::error_code& ec) {
+    error_code& ec) {
     return ep.write(std::forward<ConstBufferSequence>(buffers), ec);
 }
 

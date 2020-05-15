@@ -11,8 +11,14 @@
 
 #include <boost/config/workaround.hpp>
 #include <boost/type_erasure/member.hpp>
-#include <boost/system/error_code.hpp>
+
+#include <mqtt/error_code.hpp>
+
+#if ASIO_STANDALONE
+#include <asio.hpp>
+#else
 #include <boost/asio.hpp>
+#endif // ASIO_STANDALONE
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/shared_any.hpp>
@@ -34,7 +40,12 @@ BOOST_TYPE_ERASURE_MEMBER((MQTT_NS)(has_get_executor), get_executor, 0)
 
 namespace MQTT_NS {
 
+#if ASIO_STANDALONE
+namespace as = asio;
+#else
 namespace as = boost::asio;
+#endif // ASIO_STANDALONE
+
 using namespace boost::type_erasure;
 
 /**
@@ -51,11 +62,11 @@ using socket = shared_any<
         destructible<>,
         has_async_read<void(as::mutable_buffer, std::function<void(error_code, std::size_t)>)>,
         has_async_write<void(std::vector<as::const_buffer>, std::function<void(error_code, std::size_t)>)>,
-        has_write<std::size_t(std::vector<as::const_buffer>, boost::system::error_code&)>,
+        has_write<std::size_t(std::vector<as::const_buffer>, error_code&)>,
         has_post<void(std::function<void()>)>,
         has_lowest_layer<as::ip::tcp::socket::lowest_layer_type&()>,
         has_native_handle<any()>,
-        has_close<void(boost::system::error_code&)>,
+        has_close<void(error_code&)>,
         has_get_executor<as::executor()>
     >
 >;

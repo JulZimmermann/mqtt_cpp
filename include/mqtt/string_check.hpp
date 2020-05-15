@@ -13,7 +13,11 @@
 #include <mqtt/string_view.hpp>
 #include <mqtt/const_buffer_util.hpp>
 
+#if ASIO_STANDALONE
+namespace as = asio;
+#else
 namespace as = boost::asio;
+#endif // ASIO_STANDALONE
 
 namespace MQTT_NS {
 

@@ -9,11 +9,27 @@
 
 #include <mqtt/namespace.hpp>
 
+#if ASIO_STANDALONE
+#include <system_error>
+#else
 #include <boost/system/error_code.hpp>
+#endif // ASIO_STANDALONE
 
 namespace MQTT_NS {
 
+#if ASIO_STANDALONE
+using error_code = std::error_code;
+using system_error = std::system_error;
+auto message_size_errc = std::errc::message_size;
+auto protocol_error_errc = std::errc::protocol_error;
+auto generic_category = std::generic_category;
+#else
 using error_code = boost::system::error_code;
+using system_error = boost::system::system_error;
+auto message_size_errc = boost::system::errc::message_size;
+auto protocol_error_errc = boost::system::errc::protocol_error;
+auto generic_category = boost::system::generic_category;
+#endif // ASIO_STANDALONE
 
 } // namespace MQTT_NS
 

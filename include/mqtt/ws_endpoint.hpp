@@ -13,7 +13,11 @@
 
 #include <boost/beast/websocket.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
+#if ASIO_STANDALONE
+#include <asio/bind_executor.hpp>
+#else
 #include <boost/asio/bind_executor.hpp>
+#endif // ASIO_STANDALONE
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/string_view.hpp>
@@ -21,7 +25,11 @@
 
 namespace MQTT_NS {
 
+#if ASIO_STANDALONE
+namespace as = asio;
+#else
 namespace as = boost::asio;
+#endif // ASIO_STANDALONE
 
 template <typename Socket, typename Strand>
 class ws_endpoint {
@@ -33,7 +41,7 @@ public:
         ws_.binary(true);
     }
 
-    void close(boost::system::error_code& ec) {
+    void close(error_code& ec) {
         ws_.close(boost::beast::websocket::close_code::normal, ec);
         if (ec) return;
         do {
@@ -173,7 +181,7 @@ public:
     template <typename ConstBufferSequence>
     std::size_t write(
         ConstBufferSequence const& buffers,
-        boost::system::error_code& ec) {
+        error_code& ec) {
         ws_.write(buffers, ec);
         return as::buffer_size(buffers);
     }
@@ -224,7 +232,7 @@ template <typename Socket, typename Strand, typename ConstBufferSequence>
 inline std::size_t write(
     ws_endpoint<Socket, Strand>& ep,
     ConstBufferSequence const& buffers,
-    boost::system::error_code& ec) {
+    error_code& ec) {
     return ep.write(buffers, ec);
 }
 

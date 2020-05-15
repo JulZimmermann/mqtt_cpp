@@ -7,12 +7,21 @@
 #if !defined(MQTT_CONST_BUFFER_UTIL_HPP)
 #define MQTT_CONST_BUFFER_UTIL_HPP
 
+#if ASIO_STANDALONE
+#include <asio/buffer.hpp>
+#else
 #include <boost/asio/buffer.hpp>
+#endif // ASIO_STANDALONE
+
 #include <mqtt/namespace.hpp>
 
 namespace MQTT_NS {
 
+#if ASIO_STANDALONE
+namespace as = asio;
+#else
 namespace as = boost::asio;
+#endif // ASIO_STANDALONE
 
 inline char const* get_pointer(as::const_buffer const& cb) {
     return static_cast<char const*>(cb.data());

@@ -8,6 +8,7 @@
 #define MQTT_ENDPOINT_HPP
 
 #include <mqtt/variant.hpp> // should be top to configure variant limit
+#include <mqtt/error_code.hpp>
 
 #include <string>
 #include <vector>
@@ -21,7 +22,6 @@
 
 #include <boost/any.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
@@ -29,8 +29,13 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/composite_key.hpp>
-#include <boost/system/error_code.hpp>
 #include <boost/assert.hpp>
+
+#if ASIO_STANDALONE
+#include <asio.hpp>
+#else
+#include <boost/asio.hpp>
+#endif // ASIO_STANDALONE
 
 #include <mqtt/namespace.hpp>
 #include <mqtt/attributes.hpp>
@@ -148,7 +153,12 @@ constexpr bool should_generate_packet_id(Params const& ... params) {
 
 } // namespace detail
 
+#if ASIO_STANDALONE
+namespace as = asio;
+#else
 namespace as = boost::asio;
+#endif // ASIO_STANDALONE
+
 namespace mi = boost::multi_index;
 
 template <typename Mutex = std::mutex, template<typename...> class LockGuard = std::lock_guard, std::size_t PacketIdBytes = 2>
@@ -3966,7 +3976,7 @@ protected:
             connected_ = false;
             mqtt_connected_ = false;
             {
-                boost::system::error_code ec;
+                error_code ec;
                 socket_->close(ec);
             }
         }
@@ -3979,7 +3989,7 @@ protected:
 #if defined(SSL_R_SHORT_READ)
             || (ERR_GET_REASON(ec.value()) == SSL_R_SHORT_READ)
 #else  // defined(SSL_R_SHORT_READ)
-            || (ERR_GET_REASON(ec.value()) == boost::asio::ssl::error::stream_truncated)
+            || (ERR_GET_REASON(ec.value()) == as::ssl::error::stream_truncated)
 #endif // defined(SSL_R_SHORT_READ)
 #endif // defined(MQTT_USE_TLS)
         ) {
@@ -4027,16 +4037,16 @@ private:
     }
 
     void call_message_size_error_handlers() {
-        clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+        clean_sub_unsub_inflight_on_error(make_error_code( message_size_errc));
     }
 
     void call_protocol_error_handlers() {
-        clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
+        clean_sub_unsub_inflight_on_error(make_error_code(protocol_error_errc));
     }
 
     template <typename T>
     void shutdown_from_client(T& socket) {
-        boost::system::error_code ec;
+        error_code ec;
         socket.lowest_layer().close(ec);
     }
 
@@ -4145,7 +4155,7 @@ private:
 
     void handle_remaining_length(any session_life_keeper, this_type_sp self) {
         if (!calc_variable_length(remaining_length_, remaining_length_multiplier_, buf_.front())) {
-            clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+            clean_sub_unsub_inflight_on_error(error_code(static_cast<int>(message_size_errc), generic_category()));
             return;
         }
         if (buf_.front() & variable_length_continue_flag) {
@@ -4159,7 +4169,7 @@ private:
                         return;
                     }
                     if (bytes_transferred != 1) {
-                        clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                        clean_sub_unsub_inflight_on_error(error_code(static_cast<int>(message_size_errc), generic_category()));
                         return;
                     }
                     handle_remaining_length(force_move(session_life_keeper), force_move(self));
@@ -4221,7 +4231,7 @@ private:
                     }
                 };
             if (!check()) {
-                clean_sub_unsub_inflight_on_error(boost::system::errc::make_error_code(boost::system::errc::message_size));
+                clean_sub_unsub_inflight_on_error(error_code(static_cast<int>(message_size_errc), generic_category()));
                 return;
             }
 
@@ -8597,7 +8607,7 @@ private:
     // Blocking write
     template <typename MessageVariant>
     void do_sync_write(MessageVariant&& mv) {
-        boost::system::error_code ec;
+        error_code ec;
         if (!connected_) return;
         on_pre_send();
         total_bytes_sent_ += socket_->write(const_buffer_sequence<PacketIdBytes>(std::forward<MessageVariant>(mv)), ec);
@@ -9302,7 +9312,7 @@ private:
             () mutable {
                 if (!connected_) {
                     // offline async publish is successfully finished, because there's nothing to do.
-                    if (func) func(boost::system::errc::make_error_code(boost::system::errc::success));
+                    if (func) func(error_code(static_cast<int>(message_size_errc), generic_category()));
                     return;
                 }
                 queue_.emplace_back(force_move(mv), force_move(func));

@@ -137,10 +137,18 @@ inline buffer allocate_buffer(string_view sv) {
 
 } // namespace MQTT_NS
 
+#if ASIO_STANDALONE
+#include <asio/buffer.hpp>
+#else
 #include <boost/asio/buffer.hpp>
+#endif // ASIO_STANDALONE
 
+#if ASIO_STANDALONE
+namespace asio {
+#else
 namespace boost {
 namespace asio {
+#endif // ASIO_STANDALONE
 
 /**
  * @brief create boost::asio::const_buffer from the MQTT_NS::buffer
@@ -155,7 +163,11 @@ inline const_buffer buffer(MQTT_NS::buffer const& data) {
     return buffer(data.data(), data.size());
 }
 
+#if ASIO_STANDALONE
+} // namespace asio
+#else
 } // namespace asio
 } // namespace boost
+#endif // ASIO_STANDALONE
 
 #endif // MQTT_BUFFER_HPP
